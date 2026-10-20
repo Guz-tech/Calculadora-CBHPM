@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Calculadora CBHPM</title>
+<style>
+:root{--bg:#f4f6f8;--cd:#fff;--tx:#14202b;--mu:#5b6b7a;--bd:#dbe2e8;--ac:#0f766e;--ax:#fff;--wa:#92400e;--wb:#fef3c7;--bad:#b91c1c;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1418;--cd:#17212a;--tx:#e8eef3;--mu:#93a4b3;--bd:#2a3844;--ac:#2dd4bf;--ax:#06201d;--wa:#fcd34d;--wb:#3a2e08;--bad:#f87171;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e1418;--cd:#17212a;--tx:#e8eef3;--mu:#93a4b3;--bd:#2a3844;--ac:#2dd4bf;--ax:#06201d;--wa:#fcd34d;--wb:#3a2e08;--bad:#f87171;color-scheme:dark}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:14px}
+h1{font-size:20px;margin:4px 0 2px}h3{margin:0 0 8px;font-size:15px}.mu{color:var(--mu);font-size:13px;margin:0 0 10px}
+nav{display:flex;gap:6px;overflow-x:auto;margin:10px 0}
+nav button{flex:none;background:var(--cd);color:var(--tx);border:1px solid var(--bd);border-radius:20px;padding:8px 14px;font:inherit;cursor:pointer}
+nav button.on{background:var(--ac);color:var(--ax);border-color:var(--ac);font-weight:600}
+.card{background:var(--cd);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:12px}
+label{display:block;font-size:12px;color:var(--mu);margin-bottom:8px}
+input,select,textarea{width:100%;margin-top:3px;padding:9px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit;font-size:16px}
+textarea{font-family:ui-monospace,Menlo,monospace;font-size:13px}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:0 10px}
+.ck{display:flex;align-items:center;gap:8px;color:var(--tx);font-size:14px}.ck input{width:auto;margin:0}
+button{background:var(--ac);color:var(--ax);border:0;border-radius:8px;padding:10px 14px;font:inherit;font-weight:600;cursor:pointer}
+button.sec{background:var(--bg);color:var(--tx);border:1px solid var(--bd)}button.bad{background:none;color:var(--bad);border:1px solid var(--bad)}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.r{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--bd)}
+.r.t{font-size:18px;border:0;padding-top:12px;color:var(--ac)}
+.wa{background:var(--wb);color:var(--wa);padding:8px 10px;border-radius:8px;font-size:13px;margin:8px 0}
+.sc{overflow-x:auto}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:8px 6px;border-bottom:1px solid var(--bd);white-space:nowrap}
+#msg{color:var(--ac);font-size:13px;min-height:18px}
+.sg{padding:8px;border:1px solid var(--bd);border-radius:8px;margin:-4px 0 6px;cursor:pointer;background:var(--bg);font-size:14px}
+tr[data-c]{cursor:pointer}tr.on{background:var(--bg)}td.n{white-space:normal;min-width:170px}
+</style></head><body><main>
+<h1>🩺 Calculadora CBHPM</h1>
+<p class="mu">Valor dos procedimentos de cada edição da CBHPM.</p>
+<nav id="nav"></nav><div id="msg"></div><div id="v"></div>
+</main>
+<script>
+const g=i=>document.getElementById(i);
+const P=v=>{v=String(v).trim();if(v.includes(','))v=v.replace(/\./g,'').replace(',','.');return parseFloat(v)||0};
+const R=n=>n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const PORTES=[];for(let n=1;n<=14;n++)['A','B','C'].forEach(l=>PORTES.push(n+l));
+const AN=[0,20,45,75,110,160,220,300,400];
+const fm=n=>n.toFixed(2).replace('.',',');
+const exTable=()=>PORTES.map((c,i)=>c+';'+fm(12*Math.pow(1.13,i))).join('\n')+'\n'+AN.map((v,i)=>'AN'+i+';'+fm(v)).join('\n')+'\nUCO;15,00\nFILME;20,00';
+let S,tab='calc',curEd='';
+const EXP='EXEMPLO1;Procedimento exemplo A;3B;2;0,5;0\nEXEMPLO2;Procedimento exemplo B (com filme);2C;0;1,2;0,24';
+function def(){return{eds:[{id:'e1',name:'CBHPM 2016',ex:1,t:exTable(),p:EXP},{id:'e2',name:'CBHPM 2018',ex:1,t:exTable(),p:EXP}],
+ver:3}}
+function mig(){S.eds.forEach(e=>{if(e.p==null)e.p='';if(e.l==null)e.l=''});if(typeof S.procs==='string'){if(!S.eds[0].p)S.eds[0].p=S.procs;delete S.procs}}
+function load(){try{S=JSON.parse(localStorage.getItem('cbhpm'))}catch(e){}if(!S||!S.eds)S=def();mig()}
+function save(){try{localStorage.setItem('cbhpm',JSON.stringify(S))}catch(e){}}
+function msg(t){g('msg').textContent=t;setTimeout(()=>g('msg').textContent='',2500)}
+const edL=e=>(e.num?'Ed. '+e.num+' · ':'')+e.name;
+const tbl=t=>{const m={};t.split('\n').forEach(l=>{const a=l.split(/[;\t]/);if(a.length>1&&a[0].trim())m[a[0].trim().toUpperCase()]=P(a[1])});return m};
+const procs=(e,k)=>(e[k||'p']||'').split('\n').map(l=>l.split(';').map(x=>x.trim())).filter(a=>a.length>1&&a[0]);
+const edOf=c=>S.eds.find(x=>x.id===c.ed)||S.eds[0];
+const FR=[0,.3,.5,.7,.9];let selP=null,lk='p';
+function calcP(e,m,a,o){
+ const por=(a[2]||'').toUpperCase(),pv=m[por];
+ const fr=P(a[6])||1,hb=(pv||0)*fr*o.red*(1+o.urg),aux=hb*FR[o.aux],an=String(a[3]??'').trim()===''?0:(m['AN'+(+a[3])]||0);
+ const uco=P(a[4])*(m.UCO||0),fi=P(a[5])*(m.FILME||0);
+ return{por,miss:por&&pv===undefined,hb,aux,an,uco,fi,tot:hb+aux+an+uco+fi}}
+
+function viewCalc(){return `<div class=card>
+<label>Tabela CBHPM<select id=ce>${S.eds.map(x=>`<option value="${x.id}" ${x.id===cur().id?'selected':''}>${esc(edL(x))} (${procs(x,lk).length})</option>`).join('')}</select></label>
+<label>Lista<select id=tp><option value=p ${lk==='p'?'selected':''}>Procedimentos</option><option value=l ${lk==='l'?'selected':''}>Exames laboratoriais / patologia clínica</option></select></label>
+<label>Buscar por código ou nome<input id=pr placeholder="Digite para filtrar..." autocomplete=off></label>
+<div class=g><label>Auxiliares<select id=ax>${[0,1,2,3,4].map(i=>`<option>${i}</option>`).join('')}</select></label>
+<label>Múltiplos / via<select id=rd><option value=1>100%</option><option value=.7>70%</option><option value=.5>50%</option></select></label></div>
+<label class=ck><input type=checkbox id=ur> Urgência (+30% no honorário)</label></div>
+<div id=ws></div>
+<div class=card><div id=cnt class=mu></div><div class=sc><table id=lst></table></div></div>
+<p class=mu>Valor = honorário (porte) + auxiliares + anestesia + (qtd UCO × valor da UCO) + (qtd filme × valor do filme). Toque em um item da lista para ver o detalhe.</p>`}
+function wireCalc(){
+ g('v').oninput=g('v').onchange=e=>{if(e.target.id==='tp'){lk=e.target.value;selP=null;show('calc');return}if(e.target.id==='ce'){curEd=e.target.value;selP=null}upd()};
+ g('lst').onclick=e=>{const r=e.target.closest('[data-c]');if(r){selP=r.dataset.c;upd();g('ws').scrollIntoView({block:'nearest'})}};
+ upd()}
+function upd(){
+ const e=cur(),m=tbl(e.t),all=procs(e,lk),q=g('pr').value.trim().toLowerCase();
+ const o={aux:+g('ax').value,red:+g('rd').value,urg:g('ur').checked?.3:0};
+ const f=q?all.filter(a=>(a[0]+' '+a[1]).toLowerCase().includes(q)):all;
+ g('cnt').textContent=all.length?f.length+(lk==='p'?' procedimento(s)':' exame(s)')+(f.length>60?' · mostrando os 60 primeiros, use a busca para filtrar':''):'Esta tabela ainda não tem '+(lk==='p'?'procedimentos. Importe na aba Procedimentos.':'exames. Importe na aba Exames lab.');
+ let w=e.ex?`<div class=wa>⚠ A tabela "${esc(edL(e))}" ainda tem valores de exemplo. Cole os valores oficiais na aba Tabelas.</div>`:'';
+ const sp=selP&&all.find(a=>a[0]===selP);
+ if(sp){const r=calcP(e,m,sp,o),row=(l,v)=>v?`<div class=r><span>${l}</span><b>${R(v)}</b></div>`:'';
+  w+=`<div class=card><h3>${esc(sp[0])} · ${esc(sp[1])}</h3>`
+  +(r.miss?`<div class=wa>Porte "${esc(r.por)}" não existe nesta tabela.</div>`:'')
+  +((P(sp[4])&&!m.UCO)||(P(sp[5])&&!m.FILME)?`<div class=wa>Valor da UCO ou do filme não cadastrado nesta tabela (aba Tabelas).</div>`:'')
+  +row('Honorário médico ('+(sp[6]?esc(sp[6])+' × ':'')+esc(r.por)+')',r.hb)+row('Auxiliares',r.aux)+row('Anestesia',r.an)+row('Custo operacional (UCO)',r.uco)+row('Filme',r.fi)
+  +`<div class="r t"><span>Total</span><b>${R(r.tot)}</b></div></div>`}
+ g('ws').innerHTML=w;
+ g('lst').innerHTML=all.length?'<tr><th>Código<th>Descrição<th>Porte<th>Valor</tr>'+f.slice(0,60).map(a=>`<tr data-c="${esc(a[0])}"${a[0]===selP?' class=on':''}><td>${esc(a[0])}<td class=n>${esc(a[1])}<td>${esc((a[6]?a[6]+' × ':'')+(a[2]||'').toUpperCase())}<td><b>${R(calcP(e,m,a,o).tot)}</b></tr>`).join(''):''}
+
+
+const cur=()=>S.eds.find(x=>x.id===curEd)||S.eds[0];
+function viewEd(){const e=cur();curEd=e.id;return `<div class=card>
+<label>Versão<select id=es>${S.eds.map(x=>`<option value="${x.id}" ${x.id===e.id?'selected':''}>${esc(edL(x))}</option>`).join('')}</select></label>
+<div class=g><label>Nº da edição da CBHPM (você define)<input id=nu placeholder="ex: 5ª, 2018..." value="${esc(e.num||'')}"></label>
+<label>Nome da versão<input id=en value="${esc(e.name)}"></label>
+<label>Valor da UCO (R$)<input id=eu inputmode=decimal value="${tbl(e.t).UCO!=null?fm(tbl(e.t).UCO):''}"></label>
+<label>Valor do filme (R$/m²)<input id=ef inputmode=decimal value="${tbl(e.t).FILME!=null?fm(tbl(e.t).FILME):''}"></label></div>
+<label>Valores: uma linha por item, "porte;valor" (ex: 3B;45,20). Anestesia como AN0 a AN8. Dá para colar direto do Excel.<textarea id=et rows=14>${esc(e.t)}</textarea></label>
+<div class=btns><button id=sv>Salvar</button><button id=imp class=sec>Importar CSV</button><input type=file id=fl accept=".csv,.txt,text/csv" hidden><button id=ex1 class=sec>Exportar esta (CSV)</button><button id=exa class=sec>Exportar todas (CSV)</button><button id=dup class=sec>Duplicar versão</button><button id=del class=bad>Excluir</button></div></div>`}
+function wireEd(){
+ g('es').onchange=()=>{curEd=g('es').value;show('ed')};
+ g('sv').onclick=()=>{const e=cur();if(g('et').value!==e.t)e.ex=0;e.t=g('et').value;e.name=g('en').value||e.name;e.num=g('nu').value.trim();save();show('ed');msg('Tabela salva')};
+ g('nu').onchange=()=>{const e=cur();e.num=g('nu').value.trim();save();g('es').selectedOptions[0].textContent=edL(e);msg('Nº da edição salvo')};
+ ['eu','ef'].forEach(i=>g(i).onchange=()=>{const e=cur();e.t=mergeT(g('et').value,[['UCO',g('eu').value||'0'],['FILME',g('ef').value||'0']]);g('et').value=e.t;save();show('ed');msg('Valor salvo')});
+ g('imp').onclick=()=>g('fl').click();
+ g('fl').onchange=async()=>{const f=g('fl').files[0];if(f){try{await importCsv(f)}catch(e){msg('Erro ao ler o arquivo')}}};
+ g('ex1').onclick=()=>exportEd(0);g('exa').onclick=()=>exportEd(1);
+ g('dup').onclick=()=>{const e=cur(),n={...e,id:'e'+Date.now(),name:e.name+' (cópia)'};S.eds.push(n);curEd=n.id;save();show('ed')};
+ g('del').onclick=()=>{if(S.eds.length<2){msg('Mantenha pelo menos uma versão');return}
+  const id=cur().id;S.eds=S.eds.filter(x=>x.id!==id);curEd=S.eds[0].id;save();show('ed')}}
+function mergeT(t,rows){const m=new Map();t.split('\n').forEach(l=>{const a=l.split(/[;\t]/);if(a.length>1&&a[0].trim())m.set(a[0].trim().toUpperCase(),fm(P(a[1])))});rows.forEach(r=>m.set(r[0],fm(P(r[1]))));return[...m].map(x=>x[0]+';'+x[1]).join('\n')}
+async function importCsv(file){
+ const buf=await file.arrayBuffer();let t=new TextDecoder().decode(buf);
+ if(t.includes('\uFFFD'))t=new TextDecoder('windows-1252').decode(buf);
+ const G={},c0=cur();let n=0;
+ t.replace(/^\uFEFF/,'').split(/\r?\n/).forEach(l=>{
+  let a=(l.includes(';')||l.includes('\t'))?l.split(/[;\t]/):(l.split(',').length===2?l.split(','):[]);
+  a=a.map(x=>x.trim().replace(/^"|"$/g,''));if(a.length<2)return;
+  const big=a.length>=4,code=(big?a[2]:a[0]).toUpperCase(),val=big?a[3]:a[1];
+  if(!code||!/\d/.test(val))return;
+  const k=big?a[0]+'|'+a[1]:'';
+  (G[k]=G[k]||{num:big?a[0]:null,name:big?a[1]:null,rows:[]}).rows.push([code,val]);n++});
+ if(!n){msg('Nenhum valor reconhecido no arquivo');return}
+ const ks=Object.keys(G);
+ ks.forEach(k=>{const x=G[k];let e=x.name?(S.eds.find(e=>e.name===x.name&&(e.num||'')===(x.num||''))||S.eds.find(e=>e.name===x.name)):c0;
+  if(!e){e={id:'e'+Date.now()+Math.random().toString(36).slice(2,5),name:x.name,num:x.num,ex:0,t:''};S.eds.push(e)}
+  e.t=mergeT(e.t,x.rows);e.ex=0;if(x.name&&x.num)e.num=x.num;curEd=e.id});
+ save();show('ed');msg(ks.length+' tabela(s) importada(s), '+n+' valores')}
+async function exportEd(all){
+ let d=null;try{d=await window.claude.use('downloads')}catch(e){}
+ if(!d)d={save:async({filename:fn,data:tx})=>{const u=URL.createObjectURL(new Blob([tx],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=u;a.download=fn;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1000)}};
+ const L=all?S.eds:[cur()],rows=['edicao;nome;codigo;valor'];
+ L.forEach(e=>e.t.split('\n').forEach(l=>{const a=l.split(/[;\t]/);if(a.length>1&&a[0].trim())rows.push([e.num||'',e.name,a[0].trim(),fm(P(a[1]))].map(x=>String(x).replace(/;/g,',')).join(';'))}));
+ const c=cur(),nm=(all?'cbhpm-todas':'cbhpm-'+(c.num?'ed'+c.num+'-':'')+c.name).replace(/[^\w-]+/g,'_')+'.csv';
+ try{await d.save({filename:nm,data:'\uFEFF'+rows.join('\r\n')});msg('Exportado')}catch(e){if(!e||e.code!=='declined')msg('Não foi possível exportar')}}
+async function readTxt(f){const b=await f.arrayBuffer();let t=new TextDecoder().decode(b);if(t.includes('\uFFFD'))t=new TextDecoder('windows-1252').decode(b);return t.replace(/^\uFEFF/,'')}
+async function importProcs(file,k='p'){
+ const t=await readTxt(file),m=new Map();let n=0;
+ const e=cur();procs(e,k).forEach(a=>m.set(a[0].toUpperCase(),a));
+ t.split(/\r?\n/).forEach(l=>{
+  const a=(/[;\t]/.test(l)?l.split(/[;\t]/):l.split(',')).map(x=>x.trim().replace(/^"|"$/g,''));
+  if(a.length<2||!a[0]||/^c[oó]d/i.test(a[0]))return;
+  let r;if(/^PO\d{1,2}[ABC]$/i.test(a[3]||''))r=[a[0],a[1],a[3].replace(/^PO/i,'').toUpperCase(),'','','',a[2]];else{while(a.length<6)a.push('');a[2]=a[2].toUpperCase();r=a.slice(0,7)}
+  m.set(a[0].toUpperCase(),r);n++});
+ if(!n){msg('Nenhum item reconhecido no arquivo');return}
+ e[k]=[...m.values()].map(a=>a.join(';')).join('\n');save();show(k==='p'?'pr':'lab');msg(n+' itens importados em '+edL(e)+' ('+m.size+' no total)')}
+
+const LB={p:{tab:'pr',nome:'procedimento',plural:'procedimentos',save:'Salvar procedimentos'},l:{tab:'lab',nome:'exame laboratorial',plural:'exames',save:'Salvar exames'}};
+function viewL(k){const L=LB[k];return `<div class=card><label>Edição da CBHPM<select id=pe>${S.eds.map(x=>`<option value="${x.id}" ${x.id===cur().id?'selected':''}>${esc(edL(x))} (${procs(x,k).length})</option>`).join('')}</select></label>
+<label>Um ${L.nome} por linha: código;nome;porte;porte anestésico;qtd UCO;qtd filme;fração (opcional)<textarea id=pt rows=14>${esc(cur()[k]||'')}</textarea></label>
+<div class=btns><button id=sp>${L.save}</button><button id=ipp class=sec>Importar CSV</button><input type=file id=fp accept=".csv,.txt,text/csv" hidden></div></div><p class=mu>Cole a lista direto do Excel (colunas separadas por ponto e vírgula) ou importe um CSV na mesma ordem de colunas. Códigos repetidos são atualizados e os novos são adicionados. Também aceita o formato de frações (codigo;procedimento;fracao;porte_base, ex: PO1A): o valor passa a ser fração × valor do porte na aba Tabelas.</p>`}
+function wireL(k){const L=LB[k];
+ g('pe').onchange=()=>{curEd=g('pe').value;show(L.tab)};
+ g('ipp').onclick=()=>g('fp').click();
+ g('fp').onchange=async()=>{const f=g('fp').files[0];if(f){try{await importProcs(f,k)}catch(e){msg('Erro ao ler o arquivo')}}};
+ g('sp').onclick=()=>{cur()[k]=g('pt').value.replace(/\t/g,';');save();msg(procs(cur(),k).length+' '+L.plural+' salvos em '+edL(cur()))}}
+const viewPr=()=>viewL('p'),wirePr=()=>wireL('p'),viewLab=()=>viewL('l'),wireLab=()=>wireL('l');
+
+function viewBk(){return `<div class=card><p class=mu>Os dados ficam salvos só neste navegador. Para levar a outro computador ou compartilhar com a equipe, gere o backup e cole lá em "Restaurar".</p>
+<textarea id=bk rows=8></textarea><div class=btns style="margin-top:8px"><button id=gb>Gerar backup</button><button id=rb class=sec>Restaurar</button></div></div>`}
+function wireBk(){
+ g('gb').onclick=()=>{g('bk').value=JSON.stringify(S);g('bk').select()};
+ g('rb').onclick=()=>{try{const d=JSON.parse(g('bk').value);if(!d.eds)throw 0;S=d;mig();save();msg('Backup restaurado')}catch(e){msg('Backup inválido')}}}
+
+const T={calc:['Calcular',viewCalc,wireCalc],ed:['Tabelas',viewEd,wireEd],pr:['Procedimentos',viewPr,wirePr],lab:['Exames lab.',viewLab,wireLab],bk:['Backup',viewBk,wireBk]};
+function show(k){tab=k;const v=g('v');v.oninput=v.onchange=v.onclick=null;
+ g('nav').innerHTML=Object.keys(T).map(x=>`<button class="${x===k?'on':''}" data-k="${x}">${T[x][0]}</button>`).join('');
+ v.innerHTML=T[k][1]();T[k][2]()}
+g('nav').onclick=e=>{if(e.target.dataset.k)show(e.target.dataset.k)};
+load();show('calc');
+</script></body></html>
